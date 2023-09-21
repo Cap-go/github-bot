@@ -43,8 +43,6 @@ export default (app: Probot) => {
       return
     }
 
-    console.log('Response', currentPr)
-
     // cont a = endpoint(context.payload.issue.pull_request)
     // const requestWithAuth = request.defaults({
     //   request: {
@@ -184,6 +182,15 @@ export default (app: Probot) => {
       console.log('Options', options)
       console.log('Running', args)
     }
+
+    // Add a likeup to the comment
+    const reactionUrl = context.payload.comment.reactions.url
+    await context.octokit.request(reactionUrl, {
+      method: 'POST',
+      data: {
+        content: '+1',
+      },
+    })
 
     // const issueComment = context.issue({
     //   body: 'Thanks for testing this!',
