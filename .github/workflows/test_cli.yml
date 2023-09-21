@@ -30,8 +30,9 @@ jobs:
         #   path: capgo
         shell: bash
         run: |
-          git clone ${{ inputs.capgo_clone_url }} -b ${{ inputs.capgo_clone_branch }} $GITHUB_WORKSPACE/capgo
-      - name: "List cagpo"
-        shell: bash
-        run: |
-          ls -a $GITHUB_WORKSPACE/capgo
+          echo ${{ inputs.capgo_clone_url }}
+          echo ${{ inputs.capgo_clone_branch }}
+      # - name: "List cagpo"
+      #   shell: bash
+      #   run: |
+      #     ls -a $GITHUB_WORKSPACE/capgo

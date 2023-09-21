@@ -8,13 +8,14 @@ import type { Context, Probot } from 'probot'
 const testCliRegex = /\/testCli.*/gmi
 
 const defaultBranch = 'main'
-const defaultCapgoCloneUrl = 'https://github.com/WcaleNieWolny/capgo'
-const defaultCliCloneUrl = 'https://github.com/WcaleNieWolny/CLI.git'
+const defaultCapgoCloneRef = 'WcaleNieWolny/capgo'
+const defaultCliCloneRef = 'WcaleNieWolny/CLI'
+const githubBotRepo = 'Cap-go/github-bot'
 
 interface testOptions {
-  capgoCloneUrl: string
+  capgoCloneRef: string
   capgoBranch: string
-  cliCloneUrl: string
+  cliCloneRef: string
   cliBranch: string
 }
 
@@ -35,10 +36,10 @@ export default (app: Probot) => {
     }
 
     const currentPr = await (context.octokit.request(pullRequestUrl) as any as ReturnType<typeof context.octokit.pulls.get>)
-    const currentPrCloneUrl = currentPr.data.head.repo?.clone_url
+    const currentPrCloneRef = currentPr.data.head.repo?.full_name
     const currentPrBranch = currentPr.data.head.ref
 
-    if (!currentPrCloneUrl || !currentPrBranch) {
+    if (!currentPrCloneRef || !currentPrBranch) {
       console.log('No clone URL or branch')
       return
     }
@@ -135,28 +136,30 @@ export default (app: Probot) => {
           pull_number: pullNumber,
         })
 
-        const cloneUrl = pullRequest.data.head.repo?.clone_url
+        // repo.full_name ("full_name": "octocat/Hello-World",)
+        // head.ref ("ref": "new-topic",)
+        const cloneRef = pullRequest.data.head.repo?.full_name
         const branch = pullRequest.data.head.ref
-        console.log('Clone URL', cloneUrl, branch)
+        console.log('Clone ref', cloneRef, branch)
 
-        if (cloneUrl === undefined) {
+        if (cloneRef === undefined) {
           console.log('No clone URL')
           return
         }
 
         if (type === 'capgo') {
           options = {
-            capgoCloneUrl: currentPrCloneUrl,
+            capgoCloneRef: currentPrCloneRef,
             capgoBranch: currentPrBranch,
-            cliCloneUrl: cloneUrl,
+            cliCloneRef: cloneRef,
             cliBranch: branch,
           }
         }
         else {
           options = {
-            capgoCloneUrl: cloneUrl,
+            capgoCloneRef: cloneRef,
             capgoBranch: branch,
-            cliCloneUrl: currentPrCloneUrl,
+            cliCloneRef: currentPrCloneRef,
             cliBranch: currentPrBranch,
           }
         }
@@ -164,23 +167,36 @@ export default (app: Probot) => {
       else {
         if (type === 'capgo') {
           options = {
-            capgoCloneUrl: currentPrCloneUrl,
+            capgoCloneRef: currentPrCloneRef,
             capgoBranch: currentPrBranch,
-            cliCloneUrl: defaultCliCloneUrl,
+            cliCloneRef: defaultCliCloneRef,
             cliBranch: defaultBranch,
           }
         }
         else {
           options = {
-            capgoCloneUrl: defaultCapgoCloneUrl,
+            capgoCloneRef: defaultCapgoCloneRef,
             capgoBranch: defaultBranch,
-            cliCloneUrl: currentPrCloneUrl,
+            cliCloneRef: currentPrCloneRef,
             cliBranch: currentPrBranch,
           }
         }
       }
       console.log('Options', options)
       console.log('Running', args)
+
+      context.octokit.actions.createWorkflowDispatch({
+        owner: 'capgo',
+        repo: 'github-bot',
+        workflow_id: 'test_cli.yml',
+        inputs: {
+          capgo_clone_url: options.capgoCloneRef,
+          capgo_clone_branch: options.capgoBranch,
+          cli_clone_url: options.cliCloneRef,
+          cli_clone_branch: options.cliBranch,
+        },
+        ref: 'main',
+      })
     }
 
     // Add a likeup to the comment
