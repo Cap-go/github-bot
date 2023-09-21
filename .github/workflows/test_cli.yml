@@ -1,0 +1,34 @@
+name: Run CLI Tests
+
+on:
+  workflow_call:
+    inputs:
+      capgo_clone_url:
+        required: true
+        type: string
+      capgo_clone_branch:
+        required: true
+        type: string
+      cli_clone_url:
+        required: true
+        type: string
+      cli_clone_branch:
+        required: true
+        type: string
+
+
+jobs:
+  test:
+    runs-on: ubuntu-latest	
+    name: "Run Backend Tests"
+    steps:
+      - name: "Checkout capgo"
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.capgo_clone_url }}
+          ref: ${{ inputs.capgo_clone_branch }}
+          path: capgo
+      - name: "List cagpo"
+        shell: bash
+        run: |
+          ls -a ./capgo
