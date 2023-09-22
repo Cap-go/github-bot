@@ -11,6 +11,9 @@ dependencies:
   probot:
     specifier: ^12.2.4
     version: 12.2.4
+  probot-metadata:
+    specifier: ^2.1.1
+    version: 2.1.1(probot@12.2.4)
 
 devDependencies:
   '@antfu/eslint-config':
@@ -4933,6 +4936,14 @@ packages:
       ansi-styles: 5.2.0
       react-is: 18.2.0
     dev: true
+
+  /probot-metadata@2.1.1(probot@12.2.4):
+    resolution: {integrity: sha512-g5/tX3vtC589qUaK5YEPIT53WfFGLsuNw0UpyTDg9XBod5S5QC8hEHnral8jZkJ8LHN2Pz6Wv/40Rs7kUu73WA==}
+    peerDependencies:
+      probot: '>=10'
+    dependencies:
+      probot: 12.2.4
+    dev: false
 
   /probot@12.2.4:
     resolution: {integrity: sha512-BeBI/a5zBie1r/jCOwy6mFZzKgqjE7kY6jj0BDDPczKCkkbOLg2bN/IbJMFh/IqFtlyXVefymXGi51hJCPF6KA==}

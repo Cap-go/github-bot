@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@octokit/endpoint": "^9.0.0",
-    "probot": "^12.2.4"
+    "probot": "^12.2.4",
+    "probot-metadata": "^2.1.1"
   },
   "devDependencies": {
     "@antfu/eslint-config": "0.41.0",
