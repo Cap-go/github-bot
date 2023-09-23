@@ -50,7 +50,7 @@ export default (app: Probot) => {
 
     // context.payload.issue.pull_request.url
 
-    if (context.payload.issue.user.type === 'Bot')
+    if (context.payload.comment.user.type === 'Bot')
       return
 
     const repoUrl = context.payload.issue.repository_url
@@ -62,7 +62,7 @@ export default (app: Probot) => {
       type = 'capgo'
     }
     else {
-      console.log('Not a capgo or CLI repository')
+      console.log('Not a capgo or CLI repository', repoUrl)
       return
     }
 
@@ -167,24 +167,24 @@ export default (app: Probot) => {
         console.log('Options', options)
         console.log('Running', args)
 
-        // const repo = await context.octokit.repos.listForOrg({
-        //   org: 'cap-go',
-        //   // repo: 'github-bot',
-        // })
+        const createCiCdRunComment = context.issue({
+          body: formatStatusMsg('starting :rocket:', 'is not yet available'),
+        })
 
-        // console.log('Repo', repo)
-        // await context.octokit.actions.createWorkflowDispatch({
-        //   owner: 'capgo',
-        //   repo: 'github-bot',
-        //   workflow_id: 'test_cli.yml',
-        //   inputs: {
-        //     capgo_clone_url: options.capgoCloneRef,
-        //     capgo_clone_branch: options.capgoBranch,
-        //     cli_clone_url: options.cliCloneRef,
-        //     cli_clone_branch: options.cliBranch,
-        //   },
-        //   ref: 'main',
-        // })
+        const comment = await context.octokit.issues.createComment(createCiCdRunComment)
+        await context.octokit.actions.createWorkflowDispatch({
+          owner: 'WcaleNieWolny',
+          repo: 'temp-capgo-cicd',
+          workflow_id: 'test_cli.yml',
+          inputs: {
+            capgo_clone_url: options.capgoCloneRef,
+            capgo_clone_branch: options.capgoBranch,
+            cli_clone_url: options.cliCloneRef,
+            cli_clone_branch: options.cliBranch,
+            comment_url: comment.data.url,
+          },
+          ref: 'main',
+        })
       }
     }
     else if (foundLink) {
@@ -277,4 +277,13 @@ async function reactWith(context: Context<'issue_comment'>, reaction: '+1' | '-1
       content: reaction,
     },
   })
+}
+
+// starting :white_check_mark:
+// is available [here]()
+function formatStatusMsg(status: string, ciCdRun: string): string {
+  return `:hammer_and_wrench: Test
+
+  :arrows_counterclockwise: status: ${status}
+  :robot: CI/CD run ${ciCdRun}`
 }

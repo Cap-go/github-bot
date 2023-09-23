@@ -15,24 +15,137 @@ on:
       cli_clone_branch:
         required: true
         type: string
-
+      comment_url:
+        required: true
+        type: string
 
 jobs:
   test:
     runs-on: ubuntu-latest	
-    name: "Run Backend Tests"
+    permissions:
+      issues: write
+    name: "Run CLI Tests"
     steps:
+      - name: Get github app token
+        uses: tibdex/github-app-token@v1
+        id: get_installation_token
+        with: 
+          app_id: 392564
+          private_key: ${{ secrets.PRIVATE_KEY }}
+      - name: Change stauts (start)
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ steps.get_installation_token.outputs.token }}
+          script: |
+            console.log(context)
+
+            const job = await github.rest.actions.listJobsForWorkflowRun({
+              repo: 'temp-capgo-cicd',
+              owner: 'WcaleNieWolny',
+              run_id: context.runId,
+            });
+            console.log(job)
+            const jobId = job.data.jobs[0].id
+            if (!jobId) {
+              throw new Error('No job id')
+            }
+
+            const jobUrl = 'https://github.com/WcaleNieWolny/temp-capgo-cicd/actions/runs/RUN_ID/job/RUN_NUMBER'.replace('RUN_ID', context.runId).replace('RUN_NUMBER', jobId)
+            core.exportVariable('JOB_URL', jobUrl)
+
+            github.request({
+              method: 'PATCH',
+              url: '${{ inputs.comment_url }}',
+              data: {
+                body: ':hammer_and_wrench: Test\n\n:arrows_counterclockwise: status: Running :runner:\n:robot: CI/CD run is available [here](CICD_RUN_URL)'.replace('CICD_RUN_URL', jobUrl),
+              },
+            })
       - name: "Checkout capgo"
-        # uses: actions/checkout@v3
-        # with:
-        #   repository: ${{ inputs.capgo_clone_url }}
-        #   ref: ${{ inputs.capgo_clone_branch }}
-        #   path: capgo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.capgo_clone_url }}
+          ref: ${{ inputs.capgo_clone_branch }}
+          path: capgo
+      - name: "Checkout CLI"
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.cli_clone_url }}
+          ref: ${{ inputs.cli_clone_branch }}
+          path: cli
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - uses: pnpm/action-setup@v2
+        name: Install pnpm
+        with:
+          version: 8
+          run_install: false
+      - name: Get pnpm store directory
         shell: bash
         run: |
-          echo ${{ inputs.capgo_clone_url }}
-          echo ${{ inputs.capgo_clone_branch }}
-      # - name: "List cagpo"
-      #   shell: bash
-      #   run: |
-      #     ls -a $GITHUB_WORKSPACE/capgo
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+      - name: Install dependencies
+        run: cd ./capgo && pnpm install && cd ../cli && pnpm install && cd ..
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 1.68.6 
+      - name: Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: vx.x.x
+      - name: Run Supabase Start
+        working-directory: ./capgo
+        run: ENV=local supabase start -x studio,imgproxy,inbucket,logflare --ignore-health-check
+      - name: Start redis
+        working-directory: ./capgo
+        run: sh ./tests_backend/gh_actions/docker.sh
+      - name: Start minio
+        working-directory: ./capgo
+        run: sh ./tests_backend/gh_actions/minio.sh
+      - name: Run CLI Tests
+        working-directory: ./capgo
+        run: pnpm test:cli
+        env:
+          USE_LOCAL_REDIS: true
+          UPSTASH_TOKEN: ${{ secrets.UPSTASH_TEST_TOKEN }}
+          UPSTASH_URL: ${{ secrets.UPSTASH_TEST_URL }}
+      - name: Change stauts (failed)
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ steps.get_installation_token.outputs.token }}
+          script: |
+            const { JOB_URL } = process.env
+
+            github.request({
+              method: 'PATCH',
+              url: '${{ inputs.comment_url }}',
+              data: {
+                body: ':hammer_and_wrench: Test\n\n:arrows_counterclockwise: status: Failed :stop_sign:\n:robot: CI/CD run is available [here](CICD_RUN_URL)'.replace('CICD_RUN_URL', JOB_URL),
+              },
+            })
+      - name: Change stats (success)
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ steps.get_installation_token.outputs.token }}
+          script: |
+            const { JOB_URL } = process.env
+
+            github.request({
+              method: 'PATCH',
+              url: '${{ inputs.comment_url }}',
+              data: {
+                body: ':hammer_and_wrench: Test\n\n:arrows_counterclockwise: status: Success :white_check_mark:\n:robot: CI/CD run is available [here](CICD_RUN_URL)'.replace('CICD_RUN_URL', JOB_URL),
+              },
+            })
