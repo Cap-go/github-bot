@@ -76,9 +76,21 @@ export default (app: Probot) => {
       return
     }
 
-    context.pullRequest({
-      body,
-    })
+    if (found || foundLink) {
+      const userId = context.payload.comment.user.id
+      // 50914789 is the ID of WcaleNieWolny (https://github.com/WcaleNieWolny)
+      // 4084527 is the ID of ridex (https://github.com/riderx)
+      if (userId !== 50914789 && userId !== 4084527) {
+        console.log('Insufficient permissions')
+        const createCiCdRunComment = context.issue({
+          body: 'Insufficient permissions to use this command, please refer to [contributing.md](https://github.com/Cap-go/capgo/blob/main/CONTRIBUTING.md)',
+        })
+
+        await context.octokit.issues.createComment(createCiCdRunComment)
+        await reactWith(context, '-1')
+        return
+      }
+    }
 
     if (found) {
       for (const match of found) {
@@ -108,7 +120,7 @@ export default (app: Probot) => {
 
           const parsedUrl = await parsePrUrl(urlString)
           if (!parsedUrl) {
-            reactWith(context, '-1')
+            await reactWith(context, '-1')
             return
           }
 
@@ -193,7 +205,7 @@ export default (app: Probot) => {
         const args = match.split(' ').slice(1, undefined)
         if (args.length < 1) {
           console.log('No arguments')
-          reactWith(context, '-1')
+          await reactWith(context, '-1')
           return
         }
 

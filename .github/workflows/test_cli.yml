@@ -103,6 +103,21 @@ jobs:
         uses: denoland/setup-deno@v1
         with:
           deno-version: vx.x.x
+      - name: Cache playwright binaries
+        id: playwright-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/Library/Caches/ms-playwright
+            ~/.cache/ms-playwright
+            ${{ github.workspace }}/node_modules/playwright
+          key: cache-playwright-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: cache-playwright-
+
+      - name: Install Playwright 
+        shell: bash
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
       - name: Run Supabase Start
         working-directory: ./capgo
         run: ENV=local supabase start -x studio,imgproxy,inbucket,logflare --ignore-health-check
@@ -112,6 +127,11 @@ jobs:
       - name: Start minio
         working-directory: ./capgo
         run: sh ./tests_backend/gh_actions/minio.sh
+      - name: Set env variables
+        shell: bash
+        run: |
+          echo "MINIO_URL=$(docker inspect minio1 | grep 'Gateway' | head -n 1 | sed -e 's/            "Gateway": "//g' | sed -e 's/",//g')" >> $GITHUB_ENV
+          echo "CLI_PATH=$(realpath ./CLI) >> $GITHUB_ENV
       - name: Run CLI Tests
         working-directory: ./capgo
         run: pnpm test:cli
