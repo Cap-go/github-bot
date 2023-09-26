@@ -6,7 +6,7 @@ import metadata from 'probot-metadata'
 
 // import { createAppAuth } from '@octokit/auth-app'
 
-const testCliRegex = /\/testCli.*/gmi
+const testRegex = /\/test.*/gmi
 const linkCliPrRegex = /\/linkpr.*/gmi
 
 const defaultBranch = 'main'
@@ -69,7 +69,7 @@ export default (app: Probot) => {
     console.log('type', type)
 
     const body = context.payload.comment.body
-    const found = body.match(testCliRegex)
+    const found = body.match(testRegex)
     const foundLink = body.match(linkCliPrRegex)
     if (!found && !foundLink) {
       console.log(`No match found in ${body}`)
@@ -106,13 +106,25 @@ export default (app: Probot) => {
         console.log('Found', match, match.split(' '))
         const args = match.split(' ').slice(1, undefined)
 
+        if (args.length < 1) {
+          console.log('To little args')
+          const createCiCdRunComment = context.issue({
+            body: 'Invalid usage! Please supply the tests you want to run. (`/test cli or `/test all` for example)',
+          })
+
+          await context.octokit.issues.createComment(createCiCdRunComment)
+          await reactWith(context, '-1')
+          return
+        }
+
+        const testsToRun = args[0]
         const metadataUrl = await metadata(context as any).get('cli_pr')
         let metadataUrlString: string | undefined
 
         if (typeof metadataUrl === 'string')
           metadataUrlString = metadataUrl
 
-        const urlString = args[0] ?? metadataUrlString
+        const urlString = args[1] ?? metadataUrlString
         let options: testOptions | undefined
 
         if (urlString !== undefined) {
@@ -194,6 +206,7 @@ export default (app: Probot) => {
             cli_clone_url: options.cliCloneRef,
             cli_clone_branch: options.cliBranch,
             comment_url: comment.data.url,
+            tests_to_run: testsToRun,
           },
           ref: 'main',
         })
