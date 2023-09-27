@@ -125,6 +125,9 @@ jobs:
       - name: Run Supabase Start
         working-directory: ./capgo
         run: ENV=local supabase start -x studio,imgproxy,inbucket,logflare --ignore-health-check
+      - name: Build CLI
+        working-directory: ./cli
+        run: pnpm run dev
       - name: Start redis
         working-directory: ./capgo
         run: sh ./tests_backend/gh_actions/docker.sh
@@ -134,10 +137,8 @@ jobs:
       - name: Set env variables
         shell: bash
         run: |
-          export DOCKER_OUT="$(docker inspect minio1)"
-          echo "$DOCKER_OUT"
-          echo "MINIO_URL=$(echo "$DOCKER_OUT" | grep 'Gateway' | head -n 1 | sed -e 's/            "Gateway": "//g' | sed -e 's/",//g')" >> $GITHUB_ENV
-          echo "CLI_PATH=$(realpath ./CLI) >> $GITHUB_ENV
+          echo MINIO_URL=$(docker inspect minio1 | grep 'Gateway' | head -n 1 | sed -e 's/            "Gateway": "//g' | sed -e 's/",//g') >> $GITHUB_ENV
+          echo "CLI_PATH=$(realpath ./cli)" >> $GITHUB_ENV
       - name: Run CLI Tests
         working-directory: ./capgo
         run: deno run --allow-all tests_backend/run_backend_tests.ts ${{ inputs.tests_to_run }}
