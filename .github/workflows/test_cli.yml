@@ -43,8 +43,8 @@ jobs:
             console.log(context)
 
             const job = await github.rest.actions.listJobsForWorkflowRun({
-              repo: 'temp-capgo-cicd',
-              owner: 'WcaleNieWolny',
+              repo: 'github-bot',
+              owner: 'Cap-go',
               run_id: context.runId,
             });
             console.log(job)
@@ -53,7 +53,7 @@ jobs:
               throw new Error('No job id')
             }
 
-            const jobUrl = 'https://github.com/WcaleNieWolny/temp-capgo-cicd/actions/runs/RUN_ID/job/RUN_NUMBER'.replace('RUN_ID', context.runId).replace('RUN_NUMBER', jobId)
+            const jobUrl = 'https://github.com/Cap-go/github-bot/actions/runs/RUN_ID/job/RUN_NUMBER'.replace('RUN_ID', context.runId).replace('RUN_NUMBER', jobId)
             core.exportVariable('JOB_URL', jobUrl)
 
             github.request({
