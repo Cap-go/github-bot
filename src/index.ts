@@ -198,7 +198,7 @@ export default (app: Probot) => {
         const comment = await context.octokit.issues.createComment(createCiCdRunComment)
         await context.octokit.actions.createWorkflowDispatch({
           owner: 'Cap-go',
-          repo: 'capgo-github-bot',
+          repo: 'github-bot',
           workflow_id: 'test_cli.yml',
           inputs: {
             capgo_clone_url: options.capgoCloneRef,
