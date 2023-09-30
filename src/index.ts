@@ -10,8 +10,8 @@ const testRegex = /\/test.*/gmi
 const linkCliPrRegex = /\/linkpr.*/gmi
 
 const defaultBranch = 'main'
-const defaultCapgoCloneRef = 'WcaleNieWolny/capgo'
-const defaultCliCloneRef = 'WcaleNieWolny/CLI'
+const defaultCapgoCloneRef = 'Cap-go/capgo'
+const defaultCliCloneRef = 'Cap-go/CLI'
 // const githubBotRepo = 'Cap-go/github-bot'
 
 interface testOptions {
@@ -197,8 +197,8 @@ export default (app: Probot) => {
 
         const comment = await context.octokit.issues.createComment(createCiCdRunComment)
         await context.octokit.actions.createWorkflowDispatch({
-          owner: 'WcaleNieWolny',
-          repo: 'temp-capgo-cicd',
+          owner: 'Cap-go',
+          repo: 'capgo-github-bot',
           workflow_id: 'test_cli.yml',
           inputs: {
             capgo_clone_url: options.capgoCloneRef,
