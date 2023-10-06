@@ -176,3 +176,10 @@ jobs:
                 body: ':hammer_and_wrench: Test\n\n:arrows_counterclockwise: status: Success :white_check_mark:\n:robot: CI/CD run is available [here](CICD_RUN_URL)'.replace('CICD_RUN_URL', JOB_URL),
               },
             })
+      - uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: capgo/test-results/
+          if-no-files-found: warn
+          retention-days: 30
