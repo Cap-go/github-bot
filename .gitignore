@@ -5,6 +5,6 @@ npm-debug.log
 .env
 coverage
 lib
-
+.env.capgo
 # Local Netlify folder
 .netlify

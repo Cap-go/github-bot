@@ -191,25 +191,16 @@ export default (app: Probot) => {
         console.log('Options', options)
         console.log('Running', args)
 
-        const createCiCdRunComment = context.issue({
-          body: formatStatusMsg('starting :rocket:', 'is not yet available'),
-        })
+        // Get the latest commit
+        const sha256 = currentPr.data.head.sha
+        const owner = currentPr.data.head.user.login
+        const repo = currentPr.data.head.repo?.name
+        if (!repo) {
+          console.log('No repo')
+          return
+        }
 
-        const comment = await context.octokit.issues.createComment(createCiCdRunComment)
-        await context.octokit.actions.createWorkflowDispatch({
-          owner: 'Cap-go',
-          repo: 'github-bot',
-          workflow_id: 'test_cli.yml',
-          inputs: {
-            capgo_clone_url: options.capgoCloneRef,
-            capgo_clone_branch: options.capgoBranch,
-            cli_clone_url: options.cliCloneRef,
-            cli_clone_branch: options.cliBranch,
-            comment_url: comment.data.url,
-            tests_to_run: testsToRun,
-          },
-          ref: 'main',
-        })
+        await startWorkflow(context, owner, repo, sha256, testsToRun)
       }
     }
     else if (foundLink) {
@@ -242,12 +233,57 @@ export default (app: Probot) => {
     }
 
     await reactWith(context, '+1')
-    // Add a likeup to the comment
+  })
 
-    // const issueComment = context.issue({
-    //   body: 'Thanks for testing this!',
-    // })
-    // await context.octokit.issues.createComment(issueComment)
+  app.on('check_suite.requested', async (context: Context<'check_suite.requested'>) => {
+    const pullRequest = context.payload.check_suite.pull_requests
+    if (pullRequest.length === 0 || context.payload.check_suite.head_branch === null) {
+      console.log('No pull request or branch (perhaps a fork?)')
+      return
+    }
+
+    const repository = context.payload.repository
+
+    // Well, let's create a check run shall we?
+    startWorkflow(context, repository.owner.login, repository.name, context.payload.check_suite.head_sha)
+  })
+}
+
+async function startWorkflow(
+  context: Context<'check_suite.requested'> | Context<'issue_comment'>,
+  owner: string,
+  repo: string,
+  sha256: string,
+  testsToRun = 'all',
+) {
+  await context.octokit.checks.create({
+    owner,
+    repo,
+    name: 'E2E tests',
+    status: 'queued',
+    head_sha: sha256,
+    output: {
+      summary: '',
+      title: 'Starting E2E workflow',
+    },
+  })
+
+  await context.octokit.actions.createWorkflowDispatch({
+    owner: 'WcaleNieWolny',
+    repo: 'temp-capgo-cicd',
+    workflow_id: 'test_cli.yml',
+    inputs: {
+      capgo_clone_url: defaultCapgoCloneRef,
+      capgo_clone_branch: 'main',
+      cli_clone_url: defaultCapgoCloneRef,
+      cli_clone_branch: 'main',
+      comment_url: 'comment.data.url',
+      tests_to_run: testsToRun,
+      commit_sha: sha256,
+      repo_owner: owner,
+      repo_name: repo,
+    },
+    ref: 'main',
   })
 }
 
@@ -302,13 +338,4 @@ async function reactWith(context: Context<'issue_comment'>, reaction: '+1' | '-1
       content: reaction,
     },
   })
-}
-
-// starting :white_check_mark:
-// is available [here]()
-function formatStatusMsg(status: string, ciCdRun: string): string {
-  return `:hammer_and_wrench: Test
-
-  :arrows_counterclockwise: status: ${status}
-  :robot: CI/CD run ${ciCdRun}`
 }
