@@ -166,7 +166,7 @@ jobs:
           script: |
             const { JOB_URL } = process.env
 
-            github.rest.checks.update({
+            github.rest.checks.create({
               owner: '${{ inputs.repo_owner }}',
               repo: '${{ inputs.repo_name }}',
               name: 'E2E tests',
@@ -175,7 +175,7 @@ jobs:
               head_sha: '${{ inputs.commit_sha }}',
               details_url: JOB_URL,
               output: {
-                summary: '',
+                summary: `The detalided output is available [here](${JOB_URL})`,
                 title: 'E2E tests failed',
               },
             })
@@ -196,7 +196,7 @@ jobs:
               head_sha: '${{ inputs.commit_sha }}',
               details_url: JOB_URL,
               output: {
-                summary: summary: `The detalided output is available [here](${JOB_URL})`,
+                summary: `The detalided output is available [here](${JOB_URL})`,
                 title: 'E2E tests succeeded',
               },
             })
