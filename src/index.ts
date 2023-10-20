@@ -2,24 +2,13 @@
 import type { Context, Probot } from 'probot'
 import metadata from 'probot-metadata'
 
-// import { endpoint } from '@octokit/endpoint'
-
-// import { createAppAuth } from '@octokit/auth-app'
-
-const testRegex = /\/test.*/gmi
 const linkCliPrRegex = /\/linkpr.*/gmi
 
 const defaultBranch = 'main'
 const defaultCapgoCloneRef = 'Cap-go/capgo'
 const defaultCliCloneRef = 'Cap-go/CLI'
-// const githubBotRepo = 'Cap-go/github-bot'
 
-interface testOptions {
-  capgoCloneRef: string
-  capgoBranch: string
-  cliCloneRef: string
-  cliBranch: string
-}
+const metadataRegex = /(\n\n|\r\n)<!-- probot = (.*) -->/
 
 export default (app: Probot) => {
   app.on('issue_comment', async (context: Context<'issue_comment'>) => {
@@ -36,19 +25,6 @@ export default (app: Probot) => {
       console.log('No pull request URL')
       return
     }
-
-    // cont a = endpoint(context.payload.issue.pull_request)
-    // const requestWithAuth = request.defaults({
-    //   request: {
-    //     hook: auth.hook,
-    //   },
-    //   mediaType: {
-    //     previews: ['machine-man'],
-    //   },
-    // })
-    // await requestWithAuth('GET')
-
-    // context.payload.issue.pull_request.url
 
     if (context.payload.comment.user.type === 'Bot')
       return
@@ -69,150 +45,14 @@ export default (app: Probot) => {
     console.log('type', type)
 
     const body = context.payload.comment.body
-    const found = body.match(testRegex)
     const foundLink = body.match(linkCliPrRegex)
-    if (!found && !foundLink) {
+
+    if (!foundLink) {
       console.log(`No match found in ${body}`)
       return
     }
 
-    if (found || foundLink) {
-      const userId = context.payload.comment.user.id
-      // 50914789 is the ID of WcaleNieWolny (https://github.com/WcaleNieWolny)
-      // 4084527 is the ID of ridex (https://github.com/riderx)
-      if (userId !== 50914789 && userId !== 4084527) {
-        console.log('Insufficient permissions')
-        const createCiCdRunComment = context.issue({
-          body: 'Insufficient permissions to use this command, please refer to [contributing.md](https://github.com/Cap-go/capgo/blob/main/CONTRIBUTING.md)',
-        })
-
-        await context.octokit.issues.createComment(createCiCdRunComment)
-        await reactWith(context, '-1')
-        return
-      }
-    }
-
-    if (found) {
-      for (const match of found) {
-        const currentPr = await (context.octokit.request(pullRequestUrl) as any as ReturnType<typeof context.octokit.pulls.get>)
-        const currentPrCloneRef = currentPr.data.head.repo?.full_name
-        const currentPrBranch = currentPr.data.head.ref
-
-        if (!currentPrCloneRef || !currentPrBranch) {
-          console.log('No clone URL or branch')
-          return
-        }
-
-        console.log('Found', match, match.split(' '))
-        const args = match.split(' ').slice(1, undefined)
-
-        if (args.length < 1) {
-          console.log('To little args')
-          const createCiCdRunComment = context.issue({
-            body: 'Invalid usage! Please supply the tests you want to run. (`/test cli or `/test all` for example)',
-          })
-
-          await context.octokit.issues.createComment(createCiCdRunComment)
-          await reactWith(context, '-1')
-          return
-        }
-
-        const testsToRun = args[0]
-        const metadataUrl = await metadata(context as any).get('cli_pr')
-        let metadataUrlString: string | undefined
-
-        if (typeof metadataUrl === 'string')
-          metadataUrlString = metadataUrl
-
-        const urlString = args[1] ?? metadataUrlString
-        let options: testOptions | undefined
-
-        if (urlString !== undefined) {
-          console.log('URL string', urlString)
-
-          const parsedUrl = await parsePrUrl(urlString)
-          if (!parsedUrl) {
-            await reactWith(context, '-1')
-            return
-          }
-
-          const pullRequest = await context.octokit.pulls.get({
-            owner: parsedUrl.owner,
-            repo: parsedUrl.repo,
-            pull_number: parsedUrl.pullNumber,
-          })
-
-          // repo.full_name ("full_name": "octocat/Hello-World",)
-          // head.ref ("ref": "new-topic",)
-          const cloneRef = pullRequest.data.head.repo?.full_name
-          const branch = pullRequest.data.head.ref
-          console.log('Clone ref', cloneRef, branch)
-
-          if (cloneRef === undefined) {
-            console.log('No clone URL')
-            return
-          }
-
-          if (type === 'capgo') {
-            options = {
-              capgoCloneRef: currentPrCloneRef,
-              capgoBranch: currentPrBranch,
-              cliCloneRef: cloneRef,
-              cliBranch: branch,
-            }
-          }
-          else {
-            options = {
-              capgoCloneRef: cloneRef,
-              capgoBranch: branch,
-              cliCloneRef: currentPrCloneRef,
-              cliBranch: currentPrBranch,
-            }
-          }
-        }
-        else {
-          if (type === 'capgo') {
-            options = {
-              capgoCloneRef: currentPrCloneRef,
-              capgoBranch: currentPrBranch,
-              cliCloneRef: defaultCliCloneRef,
-              cliBranch: defaultBranch,
-            }
-          }
-          else {
-            options = {
-              capgoCloneRef: defaultCapgoCloneRef,
-              capgoBranch: defaultBranch,
-              cliCloneRef: currentPrCloneRef,
-              cliBranch: currentPrBranch,
-            }
-          }
-        }
-        console.log('Options', options)
-        console.log('Running', args)
-
-        const createCiCdRunComment = context.issue({
-          body: formatStatusMsg('starting :rocket:', 'is not yet available'),
-        })
-
-        const comment = await context.octokit.issues.createComment(createCiCdRunComment)
-        await context.octokit.actions.createWorkflowDispatch({
-          owner: 'Cap-go',
-          repo: 'github-bot',
-          workflow_id: 'test_cli.yml',
-          inputs: {
-            capgo_clone_url: options.capgoCloneRef,
-            capgo_clone_branch: options.capgoBranch,
-            cli_clone_url: options.cliCloneRef,
-            cli_clone_branch: options.cliBranch,
-            comment_url: comment.data.url,
-            tests_to_run: testsToRun,
-          },
-          ref: 'main',
-        })
-      }
-    }
-    else if (foundLink) {
+    if (foundLink) {
       for (const match of foundLink) {
         console.log('Found LINK', match, match.split(' '))
         const args = match.split(' ').slice(1, undefined)
@@ -242,12 +82,127 @@ export default (app: Probot) => {
     }
 
     await reactWith(context, '+1')
-    // Add a likeup to the comment
+  })
 
-    // const issueComment = context.issue({
-    //   body: 'Thanks for testing this!',
-    // })
-    // await context.octokit.issues.createComment(issueComment)
+  app.on('check_run.rerequested', async (context: Context<'check_run.rerequested'>) => {
+    handleCheckSuite(context)
+  })
+
+  app.on('check_suite.requested', async (context: Context<'check_suite.requested'>) => {
+    handleCheckSuite(context)
+  })
+
+  app.on('check_suite.rerequested', async (context: Context<'check_suite.rerequested'>) => {
+    handleCheckSuite(context)
+  })
+}
+
+async function handleCheckSuite(context: Context<'check_suite.requested'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'>) {
+  const checkSuite = ('check_suite' in context.payload) ? context.payload.check_suite : context.payload.check_run.check_suite
+  const pullRequest = checkSuite.pull_requests
+  const headBranch = checkSuite.head_branch
+
+  if (pullRequest.length === 0 || headBranch === null || pullRequest.length > 1) {
+    console.log('No pull request or branch (perhaps a fork?)', pullRequest.length, headBranch)
+    return
+  }
+
+  const repository = context.payload.repository
+  const type = repository.name.includes('CLI') ? 'cli' : 'capgo'
+
+  const pullRequestUrl = pullRequest[0].url
+  const pullRequestObject = await (context.octokit.request(pullRequestUrl) as any as ReturnType<typeof context.octokit.pulls.get>)
+  const issueUrl = pullRequestObject.data.issue_url
+  console.log(issueUrl)
+
+  // Willing to risk it, sure this HAS to work right?
+  // https://github.com/probot/metadata/blob/47a19638cbfc41218119078b0f82c755e518fbbd/index.js#L10
+  const issue = await (context.octokit.request(issueUrl) as any as ReturnType<typeof context.octokit.issues.get>)
+  const body = issue.data.body
+  console.log(body)
+
+  const match = body && body.match(metadataRegex)
+  const prefix = context.payload.installation?.id
+  if (!prefix) {
+    console.log('no prefix')
+    return
+  }
+
+  if (match) {
+    // TODO: change this app ID to the correct one
+    const data = JSON.parse(match[2])[prefix]
+    const cliPrUrl = data && data.cli_pr
+
+    if (cliPrUrl && typeof cliPrUrl === 'string') {
+      const parsedUrl = await parsePrUrl(cliPrUrl)
+
+      if (!parsedUrl) {
+        console.log('Invalid PR URL')
+        return
+      }
+
+      const pullRequest = await context.octokit.pulls.get({
+        owner: parsedUrl.owner,
+        repo: parsedUrl.repo,
+        pull_number: parsedUrl.pullNumber,
+      })
+
+      const cloneRef = pullRequest.data.head.repo?.full_name
+      const branch = pullRequest.data.head.ref
+
+      if (cloneRef === undefined) {
+        console.log('No clone URL')
+        return
+      }
+
+      await startWorkflow(context, repository.owner.login, repository.name, branch, cloneRef, checkSuite.head_sha, type)
+      return
+    }
+  }
+
+  // Well, let's create a check run shall we?
+  await startWorkflow(context, repository.owner.login, repository.name, defaultBranch, type === 'cli' ? defaultCliCloneRef : defaultCapgoCloneRef, checkSuite.head_sha, type)
+}
+
+async function startWorkflow(
+  context: Context<'check_suite.requested'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'>,
+  owner: string,
+  repo: string,
+  branch: string,
+  cloneRef: string,
+  sha256: string,
+  currentRepo: 'capgo' | 'cli',
+  testsToRun = 'all',
+) {
+  console.log('Starting workflow', owner, repo, branch, cloneRef, sha256, currentRepo, testsToRun)
+  await context.octokit.checks.create({
+    owner,
+    repo,
+    name: 'E2E tests',
+    status: 'queued',
+    head_sha: sha256,
+    output: {
+      summary: '',
+      title: 'Starting E2E workflow',
+    },
+  })
+
+  await context.octokit.actions.createWorkflowDispatch({
+    owner: 'WcaleNieWolny',
+    repo: 'temp-capgo-cicd',
+    workflow_id: 'test_cli.yml',
+    inputs: {
+      capgo_clone_url: currentRepo === 'capgo' ? cloneRef : defaultCapgoCloneRef,
+      capgo_clone_branch: currentRepo === 'capgo' ? branch : defaultBranch,
+      cli_clone_url: currentRepo === 'cli' ? cloneRef : defaultCliCloneRef,
+      cli_clone_branch: currentRepo === 'cli' ? branch : defaultBranch,
+      comment_url: 'comment.data.url',
+      tests_to_run: testsToRun,
+      commit_sha: sha256,
+      repo_owner: owner,
+      repo_name: repo,
+    },
+    ref: 'main',
   })
 }
 
@@ -302,13 +257,4 @@ async function reactWith(context: Context<'issue_comment'>, reaction: '+1' | '-1
       content: reaction,
     },
   })
-}
-
-// starting :white_check_mark:
-// is available [here]()
-function formatStatusMsg(status: string, ciCdRun: string): string {
-  return `:hammer_and_wrench: Test
-
-  :arrows_counterclockwise: status: ${status}
-  :robot: CI/CD run ${ciCdRun}`
 }

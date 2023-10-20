@@ -21,6 +21,15 @@ on:
       tests_to_run:
         required: true
         type: string
+      commit_sha:
+        required: true
+        type: string
+      repo_owner:
+        required: true
+        type: string
+      repo_name:
+        required: true
+        type: string
 
 jobs:
   test:
@@ -29,41 +38,44 @@ jobs:
       issues: write
     name: "Run CLI Tests"
     steps:
-      - name: Get github app token
+      - name: Get Github App Token
         uses: tibdex/github-app-token@v1
         id: get_installation_token
         with: 
           app_id: 392564
           private_key: ${{ secrets.PRIVATE_KEY }}
-      - name: Change stauts (start)
+      - name: Change Status (start)
         uses: actions/github-script@v6
         with:
           github-token: ${{ steps.get_installation_token.outputs.token }}
           script: |
-            console.log(context)
-
             const job = await github.rest.actions.listJobsForWorkflowRun({
               repo: 'github-bot',
               owner: 'Cap-go',
               run_id: context.runId,
             });
-            console.log(job)
+
             const jobId = job.data.jobs[0].id
             if (!jobId) {
               throw new Error('No job id')
             }
 
             const jobUrl = 'https://github.com/Cap-go/github-bot/actions/runs/RUN_ID/job/RUN_NUMBER'.replace('RUN_ID', context.runId).replace('RUN_NUMBER', jobId)
-            core.exportVariable('JOB_URL', jobUrl)
+            core.exportVariable('JOB_URL', jobUrl)          
 
-            github.request({
-              method: 'PATCH',
-              url: '${{ inputs.comment_url }}',
-              data: {
-                body: ':hammer_and_wrench: Test\n\n:arrows_counterclockwise: status: Running :runner:\n:robot: CI/CD run is available [here](CICD_RUN_URL)'.replace('CICD_RUN_URL', jobUrl),
+            github.rest.checks.update({
+              owner: '${{ inputs.repo_owner }}',
+              repo: '${{ inputs.repo_name }}',
+              name: 'E2E tests',
+              status: 'in_progress',
+              head_sha: '${{ inputs.commit_sha }}',
+              details_url: jobUrl,
+              output: {
+                summary: `The detailed output is available [here](${jobUrl})`,
+                title: 'Testing E2E',
               },
             })
-      - name: "Checkout capgo"
+      - name: "Checkout Capgo"
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.capgo_clone_url }}
@@ -146,7 +158,7 @@ jobs:
           USE_LOCAL_REDIS: true
           UPSTASH_TOKEN: ${{ secrets.UPSTASH_TEST_TOKEN }}
           UPSTASH_URL: ${{ secrets.UPSTASH_TEST_URL }}
-      - name: Change stauts (failed)
+      - name: Change Status (failed)
         if: failure()
         uses: actions/github-script@v6
         with:
@@ -154,14 +166,20 @@ jobs:
           script: |
             const { JOB_URL } = process.env
 
-            github.request({
-              method: 'PATCH',
-              url: '${{ inputs.comment_url }}',
-              data: {
-                body: ':hammer_and_wrench: Test\n\n:arrows_counterclockwise: status: Failed :stop_sign:\n:robot: CI/CD run is available [here](CICD_RUN_URL)'.replace('CICD_RUN_URL', JOB_URL),
+            github.rest.checks.create({
+              owner: '${{ inputs.repo_owner }}',
+              repo: '${{ inputs.repo_name }}',
+              name: 'E2E tests',
+              status: 'completed',
+              conclusion: 'failure',
+              head_sha: '${{ inputs.commit_sha }}',
+              details_url: JOB_URL,
+              output: {
+                summary: `The detailed output is available [here](${JOB_URL})`,
+                title: 'E2E tests failed',
               },
             })
-      - name: Change stats (success)
+      - name: Change Stats (success)
         if: success()
         uses: actions/github-script@v6
         with:
@@ -169,11 +187,17 @@ jobs:
           script: |
             const { JOB_URL } = process.env
 
-            github.request({
-              method: 'PATCH',
-              url: '${{ inputs.comment_url }}',
-              data: {
-                body: ':hammer_and_wrench: Test\n\n:arrows_counterclockwise: status: Success :white_check_mark:\n:robot: CI/CD run is available [here](CICD_RUN_URL)'.replace('CICD_RUN_URL', JOB_URL),
+            github.rest.checks.update({
+              owner: '${{ inputs.repo_owner }}',
+              repo: '${{ inputs.repo_name }}',
+              name: 'E2E tests',
+              status: 'completed',
+              conclusion: 'success',
+              head_sha: '${{ inputs.commit_sha }}',
+              details_url: JOB_URL,
+              output: {
+                summary: `The detailed output is available [here](${JOB_URL})`,
+                title: 'E2E tests succeeded',
               },
             })
       - uses: actions/upload-artifact@v3
