@@ -85,32 +85,61 @@ export default (app: Probot) => {
   })
 
   app.on('check_run.rerequested', async (context: Context<'check_run.rerequested'>) => {
-    await handleCheckSuite(context)
+    const checkSuite = context.payload.check_run.check_suite
+    const pullRequests = checkSuite.pull_requests
+    const headBranch = checkSuite.head_branch
+    const headSha = checkSuite.head_sha
+
+    if (!headBranch) {
+      console.log('No head branch')
+      return
+    }
+
+    await handleCheckSuite(context, pullRequests, headBranch, headSha)
   })
 
-  app.on('check_suite.requested', async (context: Context<'check_suite.requested'>) => {
-    await handleCheckSuite(context)
-  })
+  // app.on('check_suite.requested', async (context: Context<'check_suite.requested'>) => {
+  //   await handleCheckSuite(context)
+  // })
 
   app.on('check_suite.rerequested', async (context: Context<'check_suite.rerequested'>) => {
-    await handleCheckSuite(context)
+    const checkSuite = context.payload.check_suite
+    const pullRequests = checkSuite.pull_requests
+    const headBranch = checkSuite.head_branch
+    const headSha = checkSuite.head_sha
+
+    if (!headBranch) {
+      console.log('No head branch for check suite')
+      return
+    }
+
+    await handleCheckSuite(context, pullRequests, headBranch, headSha)
+  })
+
+  app.on('pull_request.synchronize', async (context: Context<'pull_request.synchronize'>) => {
+    const pullRequests = [context.payload.pull_request]
+    const headBranch = context.payload.pull_request.head.ref
+    const headSha = context.payload.after
+
+    await handleCheckSuite(context, pullRequests, headBranch, headSha)
   })
 }
 
-async function handleCheckSuite(context: Context<'check_suite.requested'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'>) {
-  const checkSuite = ('check_suite' in context.payload) ? context.payload.check_suite : context.payload.check_run.check_suite
-  const pullRequest = checkSuite.pull_requests
-  const headBranch = checkSuite.head_branch
-
-  if (pullRequest.length === 0 || headBranch === null || pullRequest.length > 1) {
-    console.log('No pull request or branch (perhaps a fork?)', pullRequest.length, headBranch)
+async function handleCheckSuite(
+  context: Context<'pull_request.synchronize'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'>,
+  pullRequests: { url: string }[],
+  headBranch: string,
+  headSha: string,
+) {
+  if (pullRequests.length === 0 || headBranch === null || pullRequests.length > 1) {
+    console.log('No pull request or branch (perhaps a fork?)', pullRequests.length, headBranch)
     return
   }
 
   const repository = context.payload.repository
   const type = repository.name.includes('CLI') ? 'cli' : 'capgo'
 
-  const pullRequestUrl = pullRequest[0].url
+  const pullRequestUrl = pullRequests[0].url
   const pullRequestObject = await (context.octokit.request(pullRequestUrl) as any as ReturnType<typeof context.octokit.pulls.get>)
   const issueUrl = pullRequestObject.data.issue_url
   console.log(issueUrl)
@@ -155,17 +184,17 @@ async function handleCheckSuite(context: Context<'check_suite.requested'> | Cont
         return
       }
 
-      await startWorkflow(context, repository.owner.login, repository.name, branch, cloneRef, checkSuite.head_sha, type)
+      await startWorkflow(context, repository.owner.login, repository.name, branch, cloneRef, headSha, type)
       return
     }
   }
 
   // Well, let's create a check run shall we?
-  await startWorkflow(context, repository.owner.login, repository.name, defaultBranch, type === 'cli' ? defaultCliCloneRef : defaultCapgoCloneRef, checkSuite.head_sha, type)
+  await startWorkflow(context, repository.owner.login, repository.name, defaultBranch, type === 'cli' ? defaultCliCloneRef : defaultCapgoCloneRef, headSha, type)
 }
 
 async function startWorkflow(
-  context: Context<'check_suite.requested'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'>,
+  context: Context<'pull_request.synchronize'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'>,
   owner: string,
   repo: string,
   branch: string,
