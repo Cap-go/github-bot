@@ -190,7 +190,7 @@ async function startWorkflow(
   await context.octokit.actions.createWorkflowDispatch({
     owner: 'Cap-go',
     repo: 'github-bot',
-    workflow_id: 'test_cli.yml',
+    workflow_id: 'test.yml',
     inputs: {
       capgo_clone_url: currentRepo === 'capgo' ? cloneRef : defaultCapgoCloneRef,
       capgo_clone_branch: currentRepo === 'capgo' ? branch : defaultBranch,

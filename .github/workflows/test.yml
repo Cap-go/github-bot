@@ -1,4 +1,4 @@
-name: Run CLI Tests
+name: Run Tests
 
 on:
   workflow_dispatch:
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest	
     permissions:
       issues: write
-    name: "Run CLI Tests"
+    name: "Run tests"
     steps:
       - name: Get Github App Token
         uses: tibdex/github-app-token@v1
@@ -63,7 +63,7 @@ jobs:
             const jobUrl = 'https://github.com/Cap-go/github-bot/actions/runs/RUN_ID/job/RUN_NUMBER'.replace('RUN_ID', context.runId).replace('RUN_NUMBER', jobId)
             core.exportVariable('JOB_URL', jobUrl)          
 
-            github.rest.checks.update({
+            github.rest.checks.create({
               owner: '${{ inputs.repo_owner }}',
               repo: '${{ inputs.repo_name }}',
               name: 'E2E tests',
@@ -187,7 +187,7 @@ jobs:
           script: |
             const { JOB_URL } = process.env
 
-            github.rest.checks.update({
+            github.rest.checks.create({
               owner: '${{ inputs.repo_owner }}',
               repo: '${{ inputs.repo_name }}',
               name: 'E2E tests',
