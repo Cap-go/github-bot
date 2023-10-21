@@ -85,15 +85,15 @@ export default (app: Probot) => {
   })
 
   app.on('check_run.rerequested', async (context: Context<'check_run.rerequested'>) => {
-    handleCheckSuite(context)
+    await handleCheckSuite(context)
   })
 
   app.on('check_suite.requested', async (context: Context<'check_suite.requested'>) => {
-    handleCheckSuite(context)
+    await handleCheckSuite(context)
   })
 
   app.on('check_suite.rerequested', async (context: Context<'check_suite.rerequested'>) => {
-    handleCheckSuite(context)
+    await handleCheckSuite(context)
   })
 }
 
