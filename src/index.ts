@@ -10,6 +10,8 @@ const defaultCliCloneRef = 'Cap-go/CLI'
 
 const metadataRegex = /(\n\n|\r\n)<!-- probot = (.*) -->/
 
+type ContextType = Context<'pull_request.synchronize'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'> | Context<'pull_request.opened'>
+
 export default (app: Probot) => {
   app.on('issue_comment', async (context: Context<'issue_comment'>) => {
     if (context.payload.action === 'deleted')
@@ -123,10 +125,18 @@ export default (app: Probot) => {
 
     await handleCheckSuite(context, pullRequests, headBranch, headSha)
   })
+
+  app.on('pull_request.opened', async (context: Context<'pull_request.opened'>) => {
+    const pullRequests = [context.payload.pull_request]
+    const headBranch = context.payload.pull_request.head.ref
+    const headSha = context.payload.pull_request.head.sha
+
+    await handleCheckSuite(context, pullRequests, headBranch, headSha)
+  })
 }
 
 async function handleCheckSuite(
-  context: Context<'pull_request.synchronize'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'>,
+  context: ContextType,
   pullRequests: { url: string }[],
   headBranch: string,
   headSha: string,
@@ -194,7 +204,7 @@ async function handleCheckSuite(
 }
 
 async function startWorkflow(
-  context: Context<'pull_request.synchronize'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'>,
+  context: ContextType,
   owner: string,
   repo: string,
   branch: string,
