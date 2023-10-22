@@ -89,8 +89,8 @@ export default (app: Probot) => {
   app.on('check_run.rerequested', async (context: Context<'check_run.rerequested'>) => {
     const checkSuite = context.payload.check_run.check_suite
     const pullRequests = checkSuite.pull_requests
-    const headBranch = checkSuite.head_branch
     const headSha = checkSuite.head_sha
+    const headBranch = await getInverseBranchForCommit(context)
 
     if (!headBranch) {
       console.log('No head branch')
@@ -107,7 +107,7 @@ export default (app: Probot) => {
   app.on('check_suite.rerequested', async (context: Context<'check_suite.rerequested'>) => {
     const checkSuite = context.payload.check_suite
     const pullRequests = checkSuite.pull_requests
-    const headBranch = checkSuite.head_branch
+    const headBranch = await getInverseBranchForCommit(context)
     const headSha = checkSuite.head_sha
 
     if (!headBranch) {
@@ -209,6 +209,29 @@ async function handleCheckSuite(
   // await startWorkflow(context, repository.owner.login, repository.name, headBranch, headSha, type)
 
   await startWorkflow(context, headRepo.owner.login, headRepo.name, headBranch, headSha, type)
+}
+
+async function getInverseBranchForCommit(context: Context<'check_run.rerequested'> | Context<'check_suite.rerequested'>): Promise<string | undefined> {
+  const repo = context.payload.repository
+  const commitSha = ('check_run' in context.payload) ? context.payload.check_run.check_suite.head_sha : context.payload.check_suite.head_sha
+
+  const branches = await context.octokit.repos.listBranchesForHeadCommit({
+    owner: repo.owner.login,
+    repo: repo.name,
+    commit_sha: commitSha,
+  })
+
+  if (branches.data.length === 0) {
+    console.log('No branches for commit', commitSha)
+    return undefined
+  }
+
+  if (branches.data.length > 1) {
+    console.log('To many head branches', JSON.stringify(branches.data))
+    return undefined
+  }
+
+  return branches.data[0].name
 }
 
 async function startWorkflow(
