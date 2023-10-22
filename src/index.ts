@@ -250,8 +250,8 @@ async function startWorkflow(
       comment_url: 'comment.data.url',
       tests_to_run: testsToRun,
       commit_sha: sha256,
-      repo_owner: owner,
-      repo_name: repo,
+      repo_owner: 'Cap-go',
+      repo_name: currentRepo === 'capgo' ? 'capgo' : 'CLI',
     },
     ref: 'main',
   })
