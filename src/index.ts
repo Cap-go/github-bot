@@ -152,16 +152,22 @@ async function handleCheckSuite(
   const pullRequestUrl = pullRequests[0].url
   const pullRequestObject = await (context.octokit.request(pullRequestUrl) as any as ReturnType<typeof context.octokit.pulls.get>)
   const issueUrl = pullRequestObject.data.issue_url
+  const headRepo = pullRequestObject.data.head.repo
   console.log(issueUrl)
+
+  if (!headRepo) {
+    console.log('no head repo')
+    return
+  }
 
   // Willing to risk it, sure this HAS to work right?
   // https://github.com/probot/metadata/blob/47a19638cbfc41218119078b0f82c755e518fbbd/index.js#L10
   const issue = await (context.octokit.request(issueUrl) as any as ReturnType<typeof context.octokit.issues.get>)
   const body = issue.data.body
-  console.log(body)
 
   const match = body && body.match(metadataRegex)
   const prefix = context.payload.installation?.id
+
   if (!prefix) {
     console.log('no prefix')
     return
@@ -194,13 +200,15 @@ async function handleCheckSuite(
         return
       }
 
-      await startWorkflow(context, repository.owner.login, repository.name, branch, cloneRef, headSha, type)
+      await startWorkflow(context, headRepo.owner.login, headRepo.name, headBranch, headSha, type, cloneRef, branch)
       return
     }
   }
 
   // Well, let's create a check run shall we?
-  await startWorkflow(context, repository.owner.login, repository.name, defaultBranch, type === 'cli' ? defaultCliCloneRef : defaultCapgoCloneRef, headSha, type)
+  // await startWorkflow(context, repository.owner.login, repository.name, headBranch, headSha, type)
+
+  await startWorkflow(context, headRepo.owner.login, headRepo.name, headBranch, headSha, type)
 }
 
 async function startWorkflow(
@@ -208,15 +216,16 @@ async function startWorkflow(
   owner: string,
   repo: string,
   branch: string,
-  cloneRef: string,
   sha256: string,
   currentRepo: 'capgo' | 'cli',
+  secondRepo?: string,
+  secondRepoBranch?: string,
   testsToRun = 'all',
 ) {
-  console.log('Starting workflow', owner, repo, branch, cloneRef, sha256, currentRepo, testsToRun)
+  console.log('Starting workflow', owner, repo, branch, sha256, currentRepo, testsToRun)
   await context.octokit.checks.create({
-    owner,
-    repo,
+    owner: 'Cap-go',
+    repo: currentRepo === 'capgo' ? 'capgo' : 'CLI',
     name: 'E2E tests',
     status: 'queued',
     head_sha: sha256,
@@ -226,14 +235,17 @@ async function startWorkflow(
     },
   })
 
+  const firstRepoRef = `${owner}/${repo}`
+  const secondRepoRef = (secondRepo && secondRepoBranch) ? secondRepo : undefined
+
   await context.octokit.actions.createWorkflowDispatch({
     owner: 'Cap-go',
     repo: 'github-bot',
     workflow_id: 'test.yml',
     inputs: {
-      capgo_clone_url: currentRepo === 'capgo' ? cloneRef : defaultCapgoCloneRef,
+      capgo_clone_url: currentRepo === 'capgo' ? firstRepoRef : (secondRepoRef ?? defaultCapgoCloneRef),
       capgo_clone_branch: currentRepo === 'capgo' ? branch : defaultBranch,
-      cli_clone_url: currentRepo === 'cli' ? cloneRef : defaultCliCloneRef,
+      cli_clone_url: currentRepo === 'cli' ? firstRepoRef : (secondRepoRef ?? defaultCapgoCloneRef),
       cli_clone_branch: currentRepo === 'cli' ? branch : defaultBranch,
       comment_url: 'comment.data.url',
       tests_to_run: testsToRun,
