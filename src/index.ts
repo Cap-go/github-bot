@@ -7,8 +7,11 @@ const linkCliPrRegex = /\/linkpr.*/gmi
 const defaultBranch = 'main'
 const defaultCapgoCloneRef = 'Cap-go/capgo'
 const defaultCliCloneRef = 'Cap-go/CLI'
+const mainRepoName = 'WcaleNieWolny'
+const githubBotRepoName = 'temp-capgo-cicd'
 
 const metadataRegex = /(\n\n|\r\n)<!-- probot = (.*) -->/
+const rerunMetadataRegex = /(?<=<!--- ).+?(?= -->)/
 
 type ContextType = Context<'pull_request.synchronize'> | Context<'check_suite.rerequested'> | Context<'check_run.rerequested'> | Context<'pull_request.opened'>
 
@@ -87,35 +90,16 @@ export default (app: Probot) => {
   })
 
   app.on('check_run.rerequested', async (context: Context<'check_run.rerequested'>) => {
-    const checkSuite = context.payload.check_run.check_suite
-    const pullRequests = checkSuite.pull_requests
-    const headSha = checkSuite.head_sha
-    const headBranch = await getInverseBranchForCommit(context)
-
-    if (!headBranch) {
-      console.log('No head branch')
-      return
-    }
-
-    await handleCheckSuite(context, pullRequests, headBranch, headSha)
+    console.log('Rerun workflow')
+    await restartWorkflow(context.payload.check_run)
   })
 
   // app.on('check_suite.requested', async (context: Context<'check_suite.requested'>) => {
   //   await handleCheckSuite(context)
   // })
 
-  app.on('check_suite.rerequested', async (context: Context<'check_suite.rerequested'>) => {
-    const checkSuite = context.payload.check_suite
-    const pullRequests = checkSuite.pull_requests
-    const headBranch = await getInverseBranchForCommit(context)
-    const headSha = checkSuite.head_sha
-
-    if (!headBranch) {
-      console.log('No head branch for check suite')
-      return
-    }
-
-    await handleCheckSuite(context, pullRequests, headBranch, headSha)
+  app.on('check_suite.rerequested', async (_context: Context<'check_suite.rerequested'>) => {
+    console.log('not yet')
   })
 
   app.on('pull_request.synchronize', async (context: Context<'pull_request.synchronize'>) => {
@@ -211,27 +195,16 @@ async function handleCheckSuite(
   await startWorkflow(context, headRepo.owner.login, headRepo.name, headBranch, headSha, type)
 }
 
-async function getInverseBranchForCommit(context: Context<'check_run.rerequested'> | Context<'check_suite.rerequested'>): Promise<string | undefined> {
-  const repo = context.payload.repository
-  const commitSha = ('check_run' in context.payload) ? context.payload.check_run.check_suite.head_sha : context.payload.check_suite.head_sha
-
-  const branches = await context.octokit.repos.listBranchesForHeadCommit({
-    owner: repo.owner.login,
-    repo: repo.name,
-    commit_sha: commitSha,
-  })
-
-  if (branches.data.length === 0) {
-    console.log('No branches for commit', commitSha)
-    return undefined
+async function restartWorkflow(checkRun: Context<'check_run.rerequested'>['payload']['check_run']): Promise<void> {
+  const summary = checkRun.output?.summary
+  if (!summary) {
+    console.log('No summary')
+    return
   }
 
-  if (branches.data.length > 1) {
-    console.log('To many head branches', JSON.stringify(branches.data))
-    return undefined
-  }
-
-  return branches.data[0].name
+  console.log('Summary', summary)
+  const metadataArr = summary.match(rerunMetadataRegex)
+  console.log(metadataArr)
 }
 
 async function startWorkflow(
@@ -247,7 +220,7 @@ async function startWorkflow(
 ) {
   console.log('Starting workflow', owner, repo, branch, sha256, currentRepo, testsToRun)
   await context.octokit.checks.create({
-    owner: 'Cap-go',
+    owner: mainRepoName,
     repo: currentRepo === 'capgo' ? 'capgo' : 'CLI',
     name: 'E2E tests',
     status: 'queued',
@@ -262,18 +235,18 @@ async function startWorkflow(
   const secondRepoRef = (secondRepo && secondRepoBranch) ? secondRepo : undefined
 
   await context.octokit.actions.createWorkflowDispatch({
-    owner: 'Cap-go',
-    repo: 'github-bot',
+    owner: mainRepoName,
+    repo: githubBotRepoName,
     workflow_id: 'test.yml',
     inputs: {
       capgo_clone_url: currentRepo === 'capgo' ? firstRepoRef : (secondRepoRef ?? defaultCapgoCloneRef),
       capgo_clone_branch: currentRepo === 'capgo' ? branch : defaultBranch,
-      cli_clone_url: currentRepo === 'cli' ? firstRepoRef : (secondRepoRef ?? defaultCapgoCloneRef),
+      cli_clone_url: currentRepo === 'cli' ? firstRepoRef : (secondRepoRef ?? defaultCliCloneRef),
       cli_clone_branch: currentRepo === 'cli' ? branch : defaultBranch,
       comment_url: 'comment.data.url',
       tests_to_run: testsToRun,
       commit_sha: sha256,
-      repo_owner: 'Cap-go',
+      repo_owner: mainRepoName,
       repo_name: currentRepo === 'capgo' ? 'capgo' : 'CLI',
     },
     ref: 'main',
