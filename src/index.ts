@@ -8,8 +8,8 @@ const linkCliPrRegex = /\/linkpr.*/gmi
 const defaultBranch = 'main'
 const defaultCapgoCloneRef = 'Cap-go/capgo'
 const defaultCliCloneRef = 'Cap-go/CLI'
-const mainRepoName = 'WcaleNieWolny'
-const githubBotRepoName = 'temp-capgo-cicd'
+const mainRepoName = 'Cap-go'
+const githubBotRepoName = 'github-bot'
 
 const metadataRegex = /(\n\n|\r\n)<!-- probot = (.*) -->/
 const rerunMetadataRegex = /(?<=<!--- ).+?(?= -->)/
