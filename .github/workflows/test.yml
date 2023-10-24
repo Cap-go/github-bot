@@ -15,9 +15,6 @@ on:
       cli_clone_branch:
         required: true
         type: string
-      comment_url:
-        required: true
-        type: string
       tests_to_run:
         required: true
         type: string
@@ -63,7 +60,7 @@ jobs:
             const jobUrl = 'https://github.com/Cap-go/github-bot/actions/runs/RUN_ID/job/RUN_NUMBER'.replace('RUN_ID', context.runId).replace('RUN_NUMBER', jobId)
             core.exportVariable('JOB_URL', jobUrl)          
 
-            const commentData = `\n<!--- ${JSON.stringify({ capgo_clone_url: '${{ inputs.capgo_clone_url }}', capgo_clone_branch: '${{ inputs.capgo_clone_branch }}', cli_clone_url: '${{ inputs.cli_clone_url }}', cli_clone_branch: '${{ inputs.cli_clone_branch }}', comment_url: '${{ inputs.comment_url }}', tests_to_run: '${{ inputs.tests_to_run }}', commit_sha: '${{ inputs.commit_sha }}', repo_owner: '${{ inputs.repo_owner }}', repo_name: '${{ inputs.repo_name }}'})} -->`
+            const commentData = `\n<!--- ${JSON.stringify({ capgo_clone_url: '${{ inputs.capgo_clone_url }}', capgo_clone_branch: '${{ inputs.capgo_clone_branch }}', cli_clone_url: '${{ inputs.cli_clone_url }}', cli_clone_branch: '${{ inputs.cli_clone_branch }}', tests_to_run: '${{ inputs.tests_to_run }}', commit_sha: '${{ inputs.commit_sha }}', repo_owner: '${{ inputs.repo_owner }}', repo_name: '${{ inputs.repo_name }}'})} -->`
             core.exportVariable('COMMENT_DATA', commentData)
 
             github.rest.checks.create({
