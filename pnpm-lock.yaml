@@ -20,6 +20,9 @@ dependencies:
   probot-metadata:
     specifier: ^2.1.1
     version: 2.1.1(probot@12.2.4)
+  zod:
+    specifier: ^3.22.4
+    version: 3.22.4
 
 devDependencies:
   '@antfu/eslint-config':
@@ -11917,3 +11920,7 @@ packages:
       compress-commons: 5.0.1
       readable-stream: 3.6.2
     dev: true
+
+  /zod@3.22.4:
+    resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+    dev: false

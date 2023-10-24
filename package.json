@@ -23,7 +23,8 @@
     "@octokit/endpoint": "^9.0.0",
     "@probot/adapter-aws-lambda-serverless": "^3.0.4",
     "probot": "^12.2.4",
-    "probot-metadata": "^2.1.1"
+    "probot-metadata": "^2.1.1",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@antfu/eslint-config": "0.41.0",
