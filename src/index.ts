@@ -305,9 +305,9 @@ async function startWorkflow(
     workflow_id: 'test.yml',
     inputs: {
       capgo_clone_url: currentRepo === 'capgo' ? firstRepoRef : (secondRepoRef ?? defaultCapgoCloneRef),
-      capgo_clone_branch: currentRepo === 'capgo' ? branch : defaultBranch,
+      capgo_clone_branch: currentRepo === 'capgo' ? branch : (secondRepoBranch ?? defaultBranch),
       cli_clone_url: currentRepo === 'cli' ? firstRepoRef : (secondRepoRef ?? defaultCliCloneRef),
-      cli_clone_branch: currentRepo === 'cli' ? branch : defaultBranch,
+      cli_clone_branch: currentRepo === 'cli' ? branch : (secondRepoBranch ?? defaultBranch),
       tests_to_run: testsToRun,
       commit_sha: sha256,
       repo_owner: mainRepoName,
