@@ -42,7 +42,7 @@ jobs:
           app_id: 392564
           private_key: ${{ secrets.PRIVATE_KEY }}
       - name: Change Status (start)
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ steps.get_installation_token.outputs.token }}
           script: |
@@ -161,7 +161,7 @@ jobs:
             })
       - name: Change Stats (success)
         if: success()
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           github-token: ${{ steps.get_installation_token.outputs.token }}
           script: |
