@@ -1,8 +1,7 @@
-FROM node:18-slim
+FROM bunlovesnode/bun
 WORKDIR /usr/src/app
 COPY package.json package-lock.json ./
-RUN npm ci --production
-RUN npm cache clean --force
+RUN bun i --production
 ENV NODE_ENV="production"
 COPY . .
-CMD [ "npm", "start" ]
+CMD [ "bun", "start" ]
