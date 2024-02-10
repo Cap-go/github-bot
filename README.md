@@ -6,10 +6,10 @@
 
 ```sh
 # Install dependencies
-pnpm install
+bun i
 
 # Run the bot
-pnpm dev
+bun dev
 ```
 
 ## License
