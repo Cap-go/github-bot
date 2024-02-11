@@ -129,12 +129,20 @@ jobs:
         run: bun run dev
       - name: Start minio
         working-directory: ./capgo
-        run: sh ./tests_backend/gh_actions/minio.sh
+        run: bun run minio:start
       - name: Set env variables
         shell: bash
         run: |
-          echo MINIO_URL=$(docker inspect minio1 | grep 'Gateway' | head -n 1 | sed -e 's/            "Gateway": "//g' | sed -e 's/",//g') >> $GITHUB_ENV
           echo "CLI_PATH=$(realpath ./cli)" >> $GITHUB_ENV
+      - name: Start Clickhouse
+        working-directory: ./capgo
+        run: bun run clickhouse:start
+      - name: Seed Clickhouse
+        working-directory: ./capgo
+        run: bun run clickhouse:seed
+      - name: Add Clickhouse to Supabase
+        working-directory: ./capgo
+        run: bun run clickhouse:add-local
       - name: Run CLI Tests
         working-directory: ./capgo
         run: deno run --allow-all tests_backend/run_backend_tests.ts ${{ inputs.tests_to_run }}
