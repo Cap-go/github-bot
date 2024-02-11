@@ -137,9 +137,6 @@ jobs:
       - name: Start Clickhouse
         working-directory: ./capgo
         run: bun run clickhouse:start
-      - name: Seed Clickhouse
-        working-directory: ./capgo
-        run: bun run clickhouse:seed
       - name: Add Clickhouse to Supabase
         working-directory: ./capgo
         run: bun run clickhouse:add-local
