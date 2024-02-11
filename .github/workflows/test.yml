@@ -213,7 +213,7 @@ jobs:
                 - Tests Run: ${{ inputs.tests_to_run }}
                 - Commit SHA: ${{ inputs.commit_sha }}
                 - Repository: ${{ inputs.repo_owner }}/${{ inputs.repo_name }}${COMMENT_DATA}`,
-              },
+              }
             })
       - uses: actions/upload-artifact@v4
         if: always()
