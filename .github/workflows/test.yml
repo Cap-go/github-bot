@@ -169,13 +169,13 @@ jobs:
                 You can download the full Playwright report from the [Artifacts section](${artifactsUrl}) of this workflow run.
       
                 **Test Details:**
-                - Capgo Clone URL: ${inputs.capgo_clone_url}
-                - Capgo Clone Branch: ${inputs.capgo_clone_branch}
-                - CLI Clone URL: ${inputs.cli_clone_url}
-                - CLI Clone Branch: ${inputs.cli_clone_branch}
-                - Tests Run: ${inputs.tests_to_run}
-                - Commit SHA: ${inputs.commit_sha}
-                - Repository: ${inputs.repo_owner}/${inputs.repo_name}${COMMENT_DATA}`,
+                - Capgo Clone URL: ${context.payload.inputs.capgo_clone_url}
+                - Capgo Clone Branch: ${context.payload.inputs.capgo_clone_branch}
+                - CLI Clone URL: ${context.payload.inputs.cli_clone_url}
+                - CLI Clone Branch: ${context.payload.inputs.cli_clone_branch}
+                - Tests Run: ${context.payload.inputs.tests_to_run}
+                - Commit SHA: ${context.payload.inputs.commit_sha}
+                - Repository: ${context.payload.inputs.repo_owner}/${context.payload.inputs.repo_name}${COMMENT_DATA}`,
                 // Include annotations if you have them
               },
             })
