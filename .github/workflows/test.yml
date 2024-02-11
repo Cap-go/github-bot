@@ -149,8 +149,24 @@ jobs:
         with:
           github-token: ${{ steps.get_installation_token.outputs.token }}
           script: |
-            const { JOB_URL, COMMENT_DATA } = process.env
-
+            const fs = require('fs');
+            const { JOB_URL, COMMENT_DATA } = process.env;
+            const reportPath = './capgo/test-results/report.json'; // Adjust the path to where your Playwright JSON report is saved
+            const report = JSON.parse(fs.readFileSync(reportPath));
+            const annotations = [];
+      
+            for (const test of report.tests) {
+              if (test.status === 'failed') {
+                annotations.push({
+                  path: test.file, // Adjust this to match the property that contains the file path in your report
+                  start_line: test.line || 1, // Adjust this to match the property that contains the line number in your report
+                  end_line: test.line || 1,
+                  annotation_level: 'failure',
+                  message: test.error.message // Adjust this to match the property that contains the error message in your report
+                });
+              }
+            }
+      
             github.rest.checks.create({
               owner: '${{ inputs.repo_owner }}',
               repo: '${{ inputs.repo_name }}',
@@ -160,10 +176,22 @@ jobs:
               head_sha: '${{ inputs.commit_sha }}',
               details_url: JOB_URL,
               output: {
-                summary: `The detailed output is available [here](${JOB_URL})${COMMENT_DATA}`,
                 title: 'E2E tests failed',
+                summary: 'End-to-end tests have failed. Review the details to diagnose the issue.',
+                text: `The E2E tests encountered failures. For more information and to view the detailed test results, please check the [test output](${JOB_URL}).
+                
+                **Test Details:**
+                - Capgo Clone URL: ${{ inputs.capgo_clone_url }}
+                - Capgo Clone Branch: ${{ inputs.capgo_clone_branch }}
+                - CLI Clone URL: ${{ inputs.cli_clone_url }}
+                - CLI Clone Branch: ${{ inputs.cli_clone_branch }}
+                - Tests Run: ${{ inputs.tests_to_run }}
+                - Commit SHA: ${{ inputs.commit_sha }}
+                - Repository: ${{ inputs.repo_owner }}/${{ inputs.repo_name }}${COMMENT_DATA}`,
+                annotations: annotations
               },
             })
+      
       - name: Change Stats (success)
         if: success()
         uses: actions/github-script@v7
