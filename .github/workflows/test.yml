@@ -146,6 +146,9 @@ jobs:
       - name: Add Clickhouse to Supabase
         working-directory: ./capgo
         run: bun run clickhouse:add-local
+      - name: Show testing env
+        working-directory: ./capgo
+        run: bunx envinfo --preset playwright
       - name: Run CLI Tests
         working-directory: ./capgo
         run: deno run --allow-all tests_backend/run_backend_tests.ts ${{ inputs.tests_to_run }}
