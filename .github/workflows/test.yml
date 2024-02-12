@@ -167,22 +167,9 @@ jobs:
               head_sha: context.sha,
               details_url: JOB_URL,
               output: {
+                summary: `The detailed output is available [here](${JOB_URL})${COMMENT_DATA}`,
                 title: 'E2E tests failed',
-                summary: 'End-to-end tests have failed. Review the details to diagnose the issue.',
-                text: `The E2E tests encountered failures. For more information and to view the detailed test results, please check the [test output](${JOB_URL}).
-      
-                **Artifact with Playwright Report:**
-                You can download the full Playwright report from the [Artifacts section](${artifactsUrl}) of this workflow run.
-      
-                **Test Details:**
-                - Capgo Clone URL: ${context.payload.inputs.capgo_clone_url}
-                - Capgo Clone Branch: ${context.payload.inputs.capgo_clone_branch}
-                - CLI Clone URL: ${context.payload.inputs.cli_clone_url}
-                - CLI Clone Branch: ${context.payload.inputs.cli_clone_branch}
-                - Tests Run: ${context.payload.inputs.tests_to_run}
-                - Commit SHA: ${context.payload.inputs.commit_sha}
-                - Repository: ${context.payload.inputs.repo_owner}/${context.payload.inputs.repo_name}${COMMENT_DATA}`
-              }
+              },
             })
       
       - name: Change Stats (success)
