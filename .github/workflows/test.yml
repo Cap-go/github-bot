@@ -130,6 +130,9 @@ jobs:
       - name: Start minio
         working-directory: ./capgo
         run: bun run minio:start
+      - name: Seed minio
+        working-directory: ./capgo
+        run: bun run minio:seed
       - name: Set env variables
         shell: bash
         run: |
@@ -137,6 +140,9 @@ jobs:
       - name: Start Clickhouse
         working-directory: ./capgo
         run: bun run clickhouse:start
+      - name: Seed Clickhouse
+        working-directory: ./capgo
+        run: bun run clickhouse:seed
       - name: Add Clickhouse to Supabase
         working-directory: ./capgo
         run: bun run clickhouse:add-local
@@ -176,7 +182,7 @@ jobs:
                 - Tests Run: ${context.payload.inputs.tests_to_run}
                 - Commit SHA: ${context.payload.inputs.commit_sha}
                 - Repository: ${context.payload.inputs.repo_owner}/${context.payload.inputs.repo_name}${COMMENT_DATA}`
-              },
+              }
             })
       
       - name: Change Stats (success)
