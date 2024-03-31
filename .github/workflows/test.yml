@@ -149,6 +149,9 @@ jobs:
       - name: Show testing env
         working-directory: ./capgo
         run: bunx envinfo --preset playwright
+      - name: Prebuild web server
+        working-directory: ./capgo
+        run:  ENV=local bun run vite build --sourcemap true --minify false --assetsDir .
       - name: Run CLI Tests
         working-directory: ./capgo
         run: deno run --allow-all tests_backend/run_backend_tests.ts ${{ inputs.tests_to_run }}
