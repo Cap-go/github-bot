@@ -21,7 +21,7 @@
   "dependencies": {
     "@netlify/functions": "^2.5.1",
     "@octokit/endpoint": "^9.0.4",
-    "@probot/adapter-aws-lambda-serverless": "^3.0.4",
+    "@probot/adapter-aws-lambda-serverless": "^4.0.0",
     "probot": "^13.0.2",
     "probot-metadata": "^2.1.1",
     "zod": "^3.22.4"
